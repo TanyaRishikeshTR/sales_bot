@@ -449,18 +449,18 @@ def answer_dashboard_reference(question: str, reason: str | None = None) -> Chat
     prefix = "Using the Power BI dashboard reference"
     if reason:
         prefix += f" because {reason}"
-    if any(term in text for term in ["top product", "product"]):
+    if any(term in text for term in ["top product", "product", "products"]):
         table = pd.DataFrame(POWER_BI_REFERENCE["top_revenue_products"], columns=["product", "dashboard_revenue"])
         answer = f"{prefix}, the top revenue product is **Lego Bricks** with **2.4M** revenue."
-    elif any(term in text for term in ["top store", "store"]):
+    elif any(term in text for term in ["top store", "store", "stores"]):
         table = pd.DataFrame(POWER_BI_REFERENCE["top_stores"], columns=["store", "dashboard_revenue", "dashboard_gross_profit"])
         answer = f"{prefix}, the top performing store is **Maven Toys Ciudad de Mexico 2** with **0.55M** revenue."
     elif "out" in text and "stock" in text:
         table = pd.DataFrame(POWER_BI_REFERENCE["out_of_stock_location_share"], columns=["location", "out_of_stock_share_pct"])
         answer = f"{prefix}, total out-of-stock items are **{format_number(POWER_BI_REFERENCE['out_of_stock_total'])}**. Downtown has the highest out-of-stock share at **59.74%**."
-    elif "category" in text:
+    elif any(term in text for term in ["category", "categories"]):
         table = pd.DataFrame(POWER_BI_REFERENCE["category_revenue_profit"], columns=["category", "dashboard_revenue", "dashboard_gross_profit"])
-        answer = f"{prefix}, Toys is the highest revenue category at **5.1M**."
+        answer = f"{prefix}, **Toys** is the highest revenue category at **5.1M**."
     elif "month" in text:
         table = pd.DataFrame(POWER_BI_REFERENCE["monthly_revenue"], columns=["month", "dashboard_revenue"])
         answer = f"{prefix}, the strongest dashboard months are Mar-Jun at about **1.5M** each."
@@ -506,20 +506,15 @@ def detect_intent(question: str) -> str:
         return "revenue"
     if any(term in text for term in ["profit forecast", "gross profit forecast", "future profit", "next 30 days profit", "profit next 30", "expected gross profit", "expected profit", "forecasted profit", "highest forecasted profit", "gross profit next month"]):
         return "profit"
+    
+    # NLP Expansion: capture any variations of Category, Location, Store, Month or actual metrics
     historical_terms = [
-        "total revenue", "revenue till now", "revenue so far", "total sales", "actual sales", "past sales",
-        "historical sales", "existing records", "current records", "records", "raw data", "total gross profit",
-        "total profit", "profit till now", "profit historically", "total units", "units sold", "top product",
-        "top products", "best product", "best selling", "top selling", "top-selling", "most sold", "sold the most",
-        "top store", "best store", "store performance", "product performance", "category performance",
-        "revenue by category", "profit by category", "product category", "revenue by month", "monthly revenue",
-        "revenue by location", "revenue by store location", "sales by location", "sales by store location",
-        "location performance", "store location performance", "store locations generated", "locations generated the most revenue", "inventory", "stock on hand", "out of stock", "out-of-stock",
-        "sample historical records", "sample records",
+        "revenue", "profit", "sales", "actual", "past", "history", "historical", "records", 
+        "category", "categories", "product", "products", "item", "items", "store", "stores", 
+        "location", "locations", "city", "cities", "month", "months", "monthly", "units", "quantity",
+        "stock", "inventory", "out of stock", "stockout"
     ]
     if any(term in text for term in historical_terms):
-        return "historical_sales"
-    if "revenue" in text or "profit" in text or "sales" in text:
         return "historical_sales"
     return "help"
 
@@ -941,16 +936,18 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
     col_map = _historical_cols(working)
     source_name = Path(source_path).name if source_path else "loaded historical file"
     calc_prefix = f"Calculated from loaded historical data file `{source_name}`"
+    
+    # Pre-clean loaded metrics into float Series
     for key in ["revenue", "profit", "units", "stock", "inventory_cost", "inventory_retail"]:
         col = _col(col_map, key)
         if col:
             working[col] = prepare_numeric_series(working, col)
-    
+            
     date_col = _col(col_map, "date")
     date_text, has_date = _date_range_text(working, date_col)
 
-    # Dynamic "Last Month" Date Filter Integration
-    filter_last_month = "last month" in text or "latest month" in text
+    # Dynamic Time Filter: "Last Month"
+    filter_last_month = "last month" in text or "latest month" in text or "last-month" in text
     if filter_last_month and date_col:
         dates = pd.to_datetime(working[date_col], errors="coerce")
         if dates.notna().any():
@@ -958,6 +955,7 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
             working = working[(dates.dt.month == max_date.month) & (dates.dt.year == max_date.year)]
             calc_prefix += f" filtered to the latest month ({max_date.strftime('%B %Y')})"
 
+    # 1. Sample Records sub-intent
     sample_terms = ["show records", "sample", "raw data", "existing records", "current records", "actual sales"]
     if any(term in text for term in sample_terms):
         sample_cols = [_col(col_map, k) for k in ["date", "product", "store", "location", "units", "revenue", "profit", "stock"] if _col(col_map, k)]
@@ -965,6 +963,7 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
         conf, reason = _historical_confidence(len(working), [], needs_date=False)
         return build_response("Here are sample records from the loaded historical sales dataset.", table=table, source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales", table_rows=20)
 
+    # 2. Out of stock sub-intent
     if any(term in text for term in ["out of stock", "out-of-stock", "stockout"]):
         out_col = _col(col_map, "out_of_stock")
         if not out_col:
@@ -981,6 +980,7 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
         answer = f"{calc_prefix}, **{format_number(count)}** records are marked out of stock, or **{format_percent(pct)}** of records. Power BI dashboard reference reports **{format_number(POWER_BI_REFERENCE['out_of_stock_total'])}** out-of-stock items."
         return build_response(answer, table=table, source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales")
 
+    # 3. Inventory Stock sub-intent
     if any(term in text for term in ["inventory", "stock on hand", "stock"]):
         stock_col = _col(col_map, "stock")
         if not stock_col:
@@ -994,27 +994,80 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
         answer = f"{calc_prefix}, stock on hand totals approximately **{format_number(working[stock_col].sum())}** units. Dashboard reference stock on hand is **20.8M**."
         return build_response(answer, table=pd.DataFrame(rows), source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales")
 
-    if any(term in text for term in ["category performance", "revenue by category", "profit by category", "product category", "by product category"]):
+    # 4. CATEGORY SUB-INTENT (Highly Conversational NLP Upgrade)
+    if any(term in text for term in ["category", "categories", "department", "departments"]):
         category_col = _col(col_map, "category")
         if not category_col:
             return _missing_result(df, "category")
+            
         metrics = [c for c in [_col(col_map, "revenue"), _col(col_map, "profit"), _col(col_map, "units")] if c]
         if not metrics:
             return _missing_result(df, "revenue, gross profit, or units")
-        sort_col = _col(col_map, "revenue") or _col(col_map, "profit") or _col(col_map, "units")
+            
+        # Determine sorting column dynamically based on conversation keywords
+        if any(w in text for term in ["profit", "profitable", "margin", "margin percent", "gross profit"] for w in term.split()):
+            sort_col = _col(col_map, "profit") or metrics[0]
+            metric_label = "gross profit"
+        elif any(w in text for term in ["unit", "volume", "sold most", "quantity", "qty", "most units"] for w in term.split()):
+            sort_col = _col(col_map, "units") or metrics[0]
+            metric_label = "units sold"
+        else:
+            sort_col = _col(col_map, "revenue") or metrics[0]
+            metric_label = "revenue"
+            
         table = clean_table(working.groupby(category_col, as_index=False)[metrics].sum().sort_values(sort_col, ascending=False), max_rows=10)
         conf, reason = _historical_confidence(len(working), [_match(col_map, "category"), _match(col_map, "revenue")], [working[sort_col]])
-        answer = f"{calc_prefix}, **{table.iloc[0][category_col]}** is the leading category by {sort_col.replace('_', ' ')}."
-        chart = {"type": "bar", "title": "Category performance", "df": table, "x": category_col, "y": sort_col}
+        
+        best_category = table.iloc[0][category_col]
+        best_val = table.iloc[0][sort_col]
+        formatted_val = format_currency(best_val) if "units" not in sort_col.lower() else format_number(best_val)
+        
+        answer = f"{calc_prefix}, the top performing product category by **{metric_label}** is **{best_category}** with **{formatted_val}**."
+        chart = {"type": "bar", "title": f"Category Performance by {metric_label.title()}", "df": table, "x": category_col, "y": sort_col}
         return build_response(answer, table=table, chart=chart, source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales")
 
-    if any(term in text for term in ["monthly revenue", "revenue by month"]):
+    # 5. STORE/LOCATION SUB-INTENT (Highly Conversational NLP Upgrade)
+    if any(term in text for term in ["store", "stores", "location", "locations", "city", "cities", "branch", "branches"]):
+        location_col = _col(col_map, "location") or _col(col_map, "city") or _col(col_map, "store")
+        if not location_col:
+            return _missing_result(df, "store location")
+            
+        metric_col = _col(col_map, "revenue") or _col(col_map, "profit") or _col(col_map, "units")
+        if not metric_col:
+            return _missing_result(df, "revenue, gross profit, or units")
+            
+        # Select sorting field dynamically
+        if any(w in text for term in ["profit", "profitable", "margin", "gross profit"] for w in term.split()):
+            sort_col = _col(col_map, "profit") or metric_col
+            metric_label = "gross profit"
+        elif any(w in text for term in ["unit", "sold", "volume", "qty"] for w in term.split()):
+            sort_col = _col(col_map, "units") or metric_col
+            metric_label = "units sold"
+        else:
+            sort_col = _col(col_map, "revenue") or metric_col
+            metric_label = "revenue"
+            
+        metrics = [c for c in [_col(col_map, "revenue"), _col(col_map, "profit"), _col(col_map, "units")] if c]
+        table = clean_table(working.groupby(location_col, as_index=False)[metrics].sum().sort_values(sort_col, ascending=False), max_rows=10)
+        conf, reason = _historical_confidence(len(working), [_match(col_map, "location")], [working[sort_col]])
+        
+        best_loc = table.iloc[0][location_col]
+        best_val = table.iloc[0][sort_col]
+        formatted_val = format_currency(best_val) if "units" not in sort_col.lower() else format_number(best_val)
+        
+        answer = f"{calc_prefix}, the top performing location/store by **{metric_label}** is **{best_loc}** with **{formatted_val}**."
+        chart = {"type": "bar", "title": f"Location Performance by {metric_label.title()}", "df": table, "x": location_col, "y": sort_col}
+        return build_response(answer, table=table, chart=chart, source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales")
+
+    # 6. MONTHLY / TIME SUB-INTENT
+    if any(term in text for term in ["monthly", "revenue by month", "sales by month", "month", "months", "trend", "timeline"]):
         revenue_col = _col(col_map, "revenue")
         date_col = _col(col_map, "date")
         if not revenue_col:
             return _missing_result(df, "revenue")
         if not date_col:
             return _missing_result(df, "date or month")
+            
         temp = working.copy()
         if _norm(date_col) in {"month", "monthname"}:
             temp["_month"] = temp[date_col].astype(str).str[:3]
@@ -1029,39 +1082,48 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
                 temp["_month"] = temp[date_col].astype(str).str[:3]
                 month_order = {m: i for i, m in enumerate(["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], 1)}
                 temp["_month_order"] = temp["_month"].map(month_order).fillna(99)
+                
         grouped = temp.groupby(["_month", "_month_order"], as_index=False)[revenue_col].sum().sort_values("_month_order")
         table = clean_table(grouped.rename(columns={"_month": "month"})[["month", revenue_col]], max_rows=12)
         top = grouped.sort_values(revenue_col, ascending=False).iloc[0]
         conf, reason = _historical_confidence(len(working), [_match(col_map, "revenue"), _match(col_map, "date")], [working[revenue_col]], needs_date=True, has_date=has_date)
-        answer = f"{calc_prefix}, the highest revenue month is **{top['_month']}** with **{format_currency(top[revenue_col])}**."
-        chart = {"type": "bar", "title": "Monthly revenue", "df": table, "x": "month", "y": revenue_col}
+        
+        answer = f"{calc_prefix}, the highest revenue month recorded is **{top['_month']}** with total revenue of **{format_currency(top[revenue_col])}**."
+        chart = {"type": "bar", "title": "Monthly Sales Performance Trend", "df": table, "x": "month", "y": revenue_col}
         return build_response(answer, table=table, chart=chart, table_rows=12, source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales")
 
-    if any(
-        term in text
-        for term in [
-            "revenue by location",
-            "revenue by store location",
-            "sales by location",
-            "sales by store location",
-            "location performance",
-            "store location performance",
-            "store locations generated",
-            "locations generated the most revenue",
-        ]
-    ):
-        location_col = _col(col_map, "location") or _col(col_map, "city") or _col(col_map, "store")
-        metric_col = _col(col_map, "revenue") or _col(col_map, "profit") or _col(col_map, "units")
-        if not location_col:
-            return _missing_result(df, "store location")
+    # 7. PRODUCT SUB-INTENT (Highly Conversational NLP Upgrade)
+    product_unit_terms = ["most sold", "most units", "top selling", "top-selling", "units by product", "sold the most units", "sold the most"]
+    if re.search(r"\btop\s+\d+\s+products?\b", text) or any(term in text for term in ["top product", "top products", "best product", "best selling", "product performance", "product revenue", "product profit"]) or any(term in text for term in product_unit_terms):
+        product_col = _col(col_map, "product")
+        if not product_col:
+            return _missing_result(df, "product")
+            
+        use_units = any(term in text for term in product_unit_terms)
+        
+        # Sort dynamically
+        if any(w in text for term in ["profit", "profitable", "margin", "gross profit"] for w in term.split()):
+            metric_col = _col(col_map, "profit") or _col(col_map, "revenue")
+            metric_label = "gross profit"
+        elif use_units or "unit" in text or "qty" in text:
+            metric_col = _col(col_map, "units") or _col(col_map, "revenue")
+            metric_label = "units sold"
+        else:
+            metric_col = _col(col_map, "revenue") or _col(col_map, "units")
+            metric_label = "revenue"
+            
         if not metric_col:
-            return _missing_result(df, "revenue, gross profit, or units")
-        table = clean_table(working.groupby(location_col, as_index=False)[metric_col].sum().sort_values(metric_col, ascending=False), max_rows=10)
-        conf, reason = _historical_confidence(len(working), [_match(col_map, "location")], [working[metric_col]])
-        answer = f"{calc_prefix}, **{table.iloc[0][location_col]}** is the leading location by {metric_col.replace('_', ' ')}."
-        chart = {"type": "bar", "title": "Store location performance", "df": table, "x": location_col, "y": metric_col}
+            return _missing_result(df, "revenue or units")
+            
+        table = clean_table(working.groupby(product_col, as_index=False)[metric_col].sum().sort_values(metric_col, ascending=False).head(10), max_rows=10)
+        value = format_currency(table.iloc[0][metric_col]) if "units" not in metric_col.lower() else format_number(table.iloc[0][metric_col])
+        conf, reason = _historical_confidence(len(working), [_match(col_map, "product")], [working[metric_col]])
+        
+        answer = f"{calc_prefix}, the top-performing product by **{metric_label}** is **{table.iloc[0][product_col]}** with **{value}**."
+        chart = {"type": "bar", "title": f"Top Products by {metric_label.title()}", "df": table, "x": product_col, "y": metric_col}
         return build_response(answer, table=table, chart=chart, source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales")
 
+    # 8. Core Metrics fall-backs: Aggregations (Revenue, Profit, Units)
     if any(term in text for term in ["total revenue", "revenue till now", "revenue so far", "total sales"]):
         revenue_col = _col(col_map, "revenue")
         if not revenue_col:
@@ -1069,7 +1131,7 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
         series = working[revenue_col]
         total = series.sum()
         conf, reason = _historical_confidence(len(working), [_match(col_map, "revenue")], [series])
-        answer = f"{calc_prefix}, total revenue is approximately **{format_currency(total)}** across **{format_number(len(working))} records**. The detected revenue column is `{revenue_col}`.{date_text}{_reference_text('revenue')}"
+        answer = f"{calc_prefix}, total revenue is approximately **{format_currency(total)}** across **{format_number(len(working))} records**.{date_text}{_reference_text('revenue')}"
         return build_response(answer, source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales")
 
     if any(term in text for term in ["total gross profit", "total profit", "profit till now", "profit historically"]):
@@ -1079,7 +1141,7 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
         series = working[profit_col]
         total = series.sum()
         conf, reason = _historical_confidence(len(working), [_match(col_map, "profit")], [series])
-        answer = f"{calc_prefix}, total gross profit is approximately **{format_currency(total)}** across **{format_number(len(working))} records**. The detected profit column is `{profit_col}`.{date_text}{_reference_text('profit')}"
+        answer = f"{calc_prefix}, total gross profit is approximately **{format_currency(total)}** across **{format_number(len(working))} records**.{date_text}{_reference_text('profit')}"
         return build_response(answer, source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales")
 
     if any(term in text for term in ["total units", "units sold", "quantity sold", "total quantity"]):
@@ -1091,38 +1153,7 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
         answer = f"{calc_prefix}, total units sold are approximately **{format_number(total)}** across **{format_number(len(working))} records**.{date_text}{_reference_text('units')}"
         return build_response(answer, source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales")
 
-    product_unit_terms = ["most sold", "most units", "top selling", "top-selling", "units by product", "sold the most units", "sold the most"]
-    if re.search(r"\btop\s+\d+\s+products?\b", text) or any(term in text for term in ["top product", "top products", "best product", "best selling", "product performance"]) or any(term in text for term in product_unit_terms):
-        product_col = _col(col_map, "product")
-        if not product_col:
-            return _missing_result(df, "product")
-        use_units = any(term in text for term in product_unit_terms)
-        metric_col = _col(col_map, "units") if use_units and _col(col_map, "units") else _col(col_map, "revenue") or _col(col_map, "units")
-        if not metric_col:
-            return _missing_result(df, "revenue or units")
-        table = clean_table(working.groupby(product_col, as_index=False)[metric_col].sum().sort_values(metric_col, ascending=False).head(10), max_rows=10)
-        metric_name = "units sold" if metric_col == _col(col_map, "units") else "historical revenue"
-        value = format_number(table.iloc[0][metric_col]) if metric_col == _col(col_map, "units") else format_currency(table.iloc[0][metric_col])
-        conf, reason = _historical_confidence(len(working), [_match(col_map, "product")], [working[metric_col]])
-        answer = f"{calc_prefix}, the top product by {metric_name} is **{table.iloc[0][product_col]}** with **{value}**."
-        chart = {"type": "bar", "title": f"Top products by {metric_name}", "df": table, "x": product_col, "y": metric_col}
-        return build_response(answer, table=table, chart=chart, source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales")
-
-    if any(term in text for term in ["top store", "best store", "store performance", "highest historical revenue"]):
-        store_col = _col(col_map, "store")
-        if not store_col:
-            return _missing_result(df, "store")
-        metric_col = _col(col_map, "revenue") or _col(col_map, "profit") or _col(col_map, "units")
-        if not metric_col:
-            return _missing_result(df, "revenue, gross profit, or units")
-        table = clean_table(working.groupby(store_col, as_index=False)[metric_col].sum().sort_values(metric_col, ascending=False).head(10), max_rows=10)
-        metric_name = "historical revenue" if metric_col == _col(col_map, "revenue") else "gross profit" if metric_col == _col(col_map, "profit") else "units sold"
-        value = format_currency(table.iloc[0][metric_col]) if metric_col != _col(col_map, "units") else format_number(table.iloc[0][metric_col])
-        conf, reason = _historical_confidence(len(working), [_match(col_map, "store")], [working[metric_col]])
-        answer = f"{calc_prefix}, the top store by {metric_name} is **{table.iloc[0][store_col]}** with **{value}**."
-        chart = {"type": "bar", "title": f"Top stores by {metric_name}", "df": table, "x": store_col, "y": metric_col}
-        return build_response(answer, table=table, chart=chart, source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales")
-
+    # Default Aggregations fallback
     totals = []
     if _col(col_map, "revenue"):
         totals.append(f"revenue **{format_currency(working[_col(col_map, 'revenue')].sum())}**")
@@ -1132,6 +1163,7 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
         totals.append(f"units sold **{format_number(working[_col(col_map, 'units')].sum())}**")
     if not totals:
         return _missing_result(df, "revenue, gross profit, or units")
+        
     sample_cols = [_col(col_map, k) for k in ["date", "product", "store", "units", "revenue", "profit"] if _col(col_map, k)]
     table = clean_table(working[_unique_columns(sample_cols)] if sample_cols else working, max_rows=10)
     conf, reason = _historical_confidence(len(working), [])
