@@ -43,6 +43,7 @@ APP_SUBTITLE = (
     "profit opportunities, and model performance."
 )
 
+# Crucial 5 specific questions categorized for readability
 EXAMPLE_QUESTIONS = [
     "How accurate is the 30-day revenue forecast?",
     "What is the projected revenue for the next 30 days?",
@@ -630,18 +631,21 @@ def status_badge(available: bool, disabled: bool = False) -> str:
 
 
 def render_sidebar(data: dict[str, dict[str, object]]) -> dict[str, bool]:
-    st.sidebar.title("Mexico Toys Sales Bot")
+    # 1. Clean Title setup
+    st.sidebar.markdown("## 🇲🇽 Mexico Toys Sales Bot")
+    st.sidebar.divider()
 
-    st.sidebar.markdown("### System Check")
+    # 2. Refactored Minimalist System Check Section
+    st.sidebar.markdown("### ⚙️ System Check")
     forecast_active = any(
         bool(data.get(key, {}).get("available"))
         for key in ["revenue_forecast", "profit_forecast"]
     )
     forecast_status = "🟢 Forecasts: Active" if forecast_active else "🔴 Forecasts: Unavailable"
     status_detail = (
-        "Revenue/profit forecast files are loaded."
+        "ML Forecast datasets successfully loaded."
         if forecast_active
-        else "Revenue/profit forecast files are not currently available."
+        else "Required forecasting outputs are offline."
     )
     st.sidebar.markdown(
         f"""
@@ -653,20 +657,26 @@ def render_sidebar(data: dict[str, dict[str, object]]) -> dict[str, bool]:
         unsafe_allow_html=True,
     )
 
+    # Clean Expander showing Schema of Historical Data
     columns = data.get("historical_sales", {}).get("column_names", [])
-    with st.sidebar.expander("Historical Data Columns", expanded=False):
+    with st.sidebar.expander("📊 Historical Data Columns", expanded=False):
         if columns:
             st.markdown("\n".join(f"- `{column}`" for column in columns))
         else:
-            st.caption("No historical sales columns are loaded.")
+            st.caption("No historical columns loaded.")
 
     st.sidebar.divider()
-    st.sidebar.markdown("### Suggested Questions")
+
+    # 3. Clean Click-Routing Section for Suggested Questions
+    st.sidebar.markdown("### 💡 Suggested Questions")
+    
+    # Render exactly your 5 desired questions
     for index, question in enumerate(EXAMPLE_QUESTIONS):
         if st.sidebar.button(question, key=f"sidebar-suggested-question-{index}", use_container_width=True):
             submit_question(question, data)
             st.rerun()
 
+    # Safely return downstream layout properties back to main()
     return {
         "show_preview": False,
         "show_dashboard": False,
@@ -1246,12 +1256,23 @@ def main() -> None:
     render_technical_architecture()
     render_kpi_cards(data)
     render_optional_panels(data, options)
-    chat_tab, visuals_tab = st.tabs(["💬 Chat Assistant", "📈 Forecast Visuals"])
+    
+    # Render Dashboard Tabs
+    chat_tab, visuals_tab, historical_tab, model_tab = st.tabs([
+        "💬 Chat Assistant", 
+        "📈 Forecast Visuals",
+        "📊 Historical Performance",
+        "🧠 Model Performance"
+    ])
 
     with chat_tab:
         render_chat_tab(data)
     with visuals_tab:
         render_forecast_visuals_tab(data, show_raw_previews=options["show_preview"])
+    with historical_tab:
+        render_historical_tab(data)
+    with model_tab:
+        render_model_performance_tab(data)
 
 
 if __name__ == "__main__":
