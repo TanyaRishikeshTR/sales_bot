@@ -1,0 +1,3 @@
+target,candidate_model,model_used,test_periods,mae,rmse,mape,smape,selected_model
+gross_profit,moving_average_baseline,moving_average_7_day,30,1886.1761904761906,2061.1958960197617,33.66598647560826,31.604683362473914,False
+gross_profit,exponential_smoothing_holt_winters,holt_winters_weekly_additive,30,656.95346984932,776.4552278280692,12.115891249597318,11.596803852635846,True

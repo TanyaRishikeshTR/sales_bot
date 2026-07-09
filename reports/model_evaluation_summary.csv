@@ -1,0 +1,6 @@
+model_area,target,candidate_model,model_used,test_periods,mae,rmse,mape,smape,selected_model
+revenue,revenue,moving_average_baseline,moving_average_7_day,30,7264.883238095238,8036.018394673069,35.989183611193745,33.397540605784535,False
+revenue,revenue,exponential_smoothing_holt_winters,holt_winters_weekly_additive,30,2153.638750996348,2765.6290050332645,11.282085906677302,10.66514019666817,True
+gross_profit,gross_profit,moving_average_baseline,moving_average_7_day,30,1886.1761904761904,2061.1958960197617,33.66598647560826,31.604683362473917,False
+gross_profit,gross_profit,exponential_smoothing_holt_winters,holt_winters_weekly_additive,30,656.95346984932,776.4552278280692,12.115891249597318,11.596803852635846,True
+demand,aggregate_units,moving_average_7_day_backtest,moving_average_7_day,7,670.591836734694,704.6026090887642,41.910150938597425,38.52521920420388,True

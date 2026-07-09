@@ -1,0 +1,32 @@
+# ==========================================
+# 1. Python Environment & Secrets (IGNORED)
+# ==========================================
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+
+# ==========================================
+# 2. Large & Raw Datasets (IGNORED)
+# ==========================================
+# We ignore these to prevent pushing massive files to GitHub 
+# and to keep confidential raw transactions private.
+data/raw/*.csv
+data/processed/*.csv
+
+# ==========================================
+# 3. ML Model Binaries (IGNORED)
+# ==========================================
+models/**/*.pkl
+
+# ==========================================
+# 4. Streamlit Cloud Deliverables (NOT IGNORED)
+# ==========================================
+# The "!" tells Git to explicitly TRACK these files.
+# The cloud container needs these pre-computed files to display 
+# forecasts and charts on the web UI.
+!data/outputs/**/*.csv
+!visuals/**/*.png
+!reports/**/*.csv

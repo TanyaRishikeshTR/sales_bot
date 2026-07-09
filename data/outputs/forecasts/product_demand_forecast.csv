@@ -1,0 +1,36 @@
+product_key,product_id,product_name,product_category,unit_margin,product_margin,forecasted_units_next_7_days,forecasted_units_next_30_days,demand_model_used
+3,3,Barrel O' Slime,Art & Crafts,2.0,2.0,1455.6778584762355,6235.294902453492,product_level_holt_winters_weekly_additive
+25,25,Playdoh Can,Art & Crafts,1.0,1.0,1406.3975553470098,6054.703038122503,product_level_holt_winters_weekly_additive
+19,19,Magic Sand,Art & Crafts,2.0,2.0,1182.7004176577634,5129.535897662267,product_level_holt_winters_weekly_additive
+9,9,Dino Egg,Toys,1.0,1.0,740.5867887889467,3143.9859719850874,product_level_holt_winters_weekly_additive
+28,28,Playfoam,Art & Crafts,7.0,7.0,716.2213492814801,3133.7571016884135,product_level_holt_winters_weekly_additive
+24,24,Nerf Gun,Sports & Outdoors,5.0,5.0,582.1037751646029,2503.6703437619813,product_level_holt_winters_weekly_additive
+6,6,Colorbuds,Electronics,8.0,8.0,575.1567988236427,2381.1591347502663,product_level_holt_winters_weekly_additive
+21,21,Mini Ping Pong Set,Sports & Outdoors,3.0,3.0,528.7973609812886,2184.1526535232824,product_level_holt_winters_weekly_additive
+18,18,Lego Bricks,Toys,5.0,5.0,494.3189739931572,2079.888056431666,product_level_holt_winters_weekly_additive
+8,8,Deck Of Cards,Games,3.0,3.0,513.6734620103277,2076.251834690297,product_level_holt_winters_weekly_additive
+2,2,Animal Figures,Toys,3.0,3.0,487.2101069403733,2069.604979236352,product_level_holt_winters_weekly_additive
+31,31,Splash Balls,Sports & Outdoors,1.0,1.0,387.715182329925,1606.9351391757857,product_level_holt_winters_weekly_additive
+1,1,Action Figure,Toys,6.0,6.0,366.03631975301073,1500.6667601136648,product_level_holt_winters_weekly_additive
+30,30,Rubik's Cube,Games,2.0,2.0,348.864805441293,1463.6587194130182,product_level_holt_winters_weekly_additive
+15,15,Hot Wheels 5-Pack,Toys,2.0,2.0,332.94248755304625,1414.014315387171,product_level_holt_winters_weekly_additive
+10,10,Dinosaur Figures,Toys,4.0,4.0,322.66024505514287,1368.7588302185034,product_level_holt_winters_weekly_additive
+14,14,Glass Marbles,Games,5.0,5.0,236.4648265342794,987.0874550152826,product_level_holt_winters_weekly_additive
+13,13,Gamer Headphones,Electronics,6.0,6.0,227.6388119051554,974.2438475081783,product_level_holt_winters_weekly_additive
+7,7,Dart Gun,Sports & Outdoors,4.0,4.0,232.09035206748302,952.5717604662353,product_level_holt_winters_weekly_additive
+17,17,Kids Makeup Kit,Art & Crafts,6.0,6.0,222.44848345521567,932.4616128761611,product_level_holt_winters_weekly_additive
+27,27,Playdoh Toolkit,Art & Crafts,1.0,1.0,195.1799966432437,813.007412832637,product_level_holt_winters_weekly_additive
+12,12,Foam Disk Launcher,Sports & Outdoors,3.0,3.0,153.71178953385845,606.609192799905,product_level_holt_winters_weekly_additive
+11,11,Etch A Sketch,Art & Crafts,10.0,10.0,146.94098467134805,586.0947469699311,product_level_holt_winters_weekly_additive
+34,34,Toy Robot,Electronics,5.0,5.0,114.51935682792357,475.9462108829575,product_level_holt_winters_weekly_additive
+23,23,Mr. Potatohead,Toys,5.0,5.0,87.51438157737,374.9614587707208,product_level_holt_winters_weekly_additive
+33,33,Teddy Bear,Toys,2.0,2.0,65.10882577544473,280.4664408265656,product_level_holt_winters_weekly_additive
+26,26,Playdoh Playset,Art & Crafts,4.0,4.0,62.1497268259311,262.7945939887092,product_level_holt_winters_weekly_additive
+22,22,Monopoly,Games,6.0,6.0,50.628084414274376,216.0040400528823,product_level_holt_winters_weekly_additive
+32,32,Supersoaker Water Gun,Sports & Outdoors,3.0,3.0,53.13624343600711,210.15226637915652,product_level_holt_winters_weekly_additive
+5,5,Classic Dominoes,Games,2.0,2.0,46.96544320065228,197.37048202089247,product_level_holt_winters_weekly_additive
+29,29,Plush Pony,Toys,11.0,11.0,47.360076429119545,188.27322073245477,product_level_holt_winters_weekly_additive
+4,4,Chutes & Ladders,Games,3.0,3.0,41.32893578914632,181.48266542787655,product_level_holt_winters_weekly_additive
+35,35,Uno Card Game,Games,4.0,4.0,36.720846454773714,158.35907079643167,product_level_holt_winters_weekly_additive
+16,16,Jenga,Games,7.0,7.0,26.92211875520452,97.11755982867105,product_level_holt_winters_weekly_additive
+20,20,Mini Basketball Hoop,Sports & Outdoors,16.0,16.0,17.645148876606612,72.1412549890458,product_level_holt_winters_weekly_additive
