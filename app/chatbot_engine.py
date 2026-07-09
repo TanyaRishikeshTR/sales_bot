@@ -945,7 +945,18 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
         col = _col(col_map, key)
         if col:
             working[col] = prepare_numeric_series(working, col)
-    date_text, has_date = _date_range_text(working, _col(col_map, "date"))
+    
+    date_col = _col(col_map, "date")
+    date_text, has_date = _date_range_text(working, date_col)
+
+    # Dynamic "Last Month" Date Filter Integration
+    filter_last_month = "last month" in text or "latest month" in text
+    if filter_last_month and date_col:
+        dates = pd.to_datetime(working[date_col], errors="coerce")
+        if dates.notna().any():
+            max_date = dates.max()
+            working = working[(dates.dt.month == max_date.month) & (dates.dt.year == max_date.year)]
+            calc_prefix += f" filtered to the latest month ({max_date.strftime('%B %Y')})"
 
     sample_terms = ["show records", "sample", "raw data", "existing records", "current records", "actual sales"]
     if any(term in text for term in sample_terms):
@@ -1011,8 +1022,13 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
             temp["_month_order"] = temp["_month"].map(month_order).fillna(99)
         else:
             dates = pd.to_datetime(temp[date_col], errors="coerce")
-            temp["_month"] = dates.dt.strftime("%b")
-            temp["_month_order"] = dates.dt.month
+            if dates.notna().any():
+                temp["_month"] = dates.dt.strftime("%b")
+                temp["_month_order"] = dates.dt.month
+            else:
+                temp["_month"] = temp[date_col].astype(str).str[:3]
+                month_order = {m: i for i, m in enumerate(["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], 1)}
+                temp["_month_order"] = temp["_month"].map(month_order).fillna(99)
         grouped = temp.groupby(["_month", "_month_order"], as_index=False)[revenue_col].sum().sort_values("_month_order")
         table = clean_table(grouped.rename(columns={"_month": "month"})[["month", revenue_col]], max_rows=12)
         top = grouped.sort_values(revenue_col, ascending=False).iloc[0]
@@ -1034,7 +1050,7 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
             "locations generated the most revenue",
         ]
     ):
-        location_col = _col(col_map, "location")
+        location_col = _col(col_map, "location") or _col(col_map, "city") or _col(col_map, "store")
         metric_col = _col(col_map, "revenue") or _col(col_map, "profit") or _col(col_map, "units")
         if not location_col:
             return _missing_result(df, "store location")

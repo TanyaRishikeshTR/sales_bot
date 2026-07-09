@@ -43,7 +43,7 @@ APP_SUBTITLE = (
     "profit opportunities, and model performance."
 )
 
-# Crucial 5 specific questions categorized for readability
+# Exactly your 5 specific questions
 EXAMPLE_QUESTIONS = [
     "How accurate is the 30-day revenue forecast?",
     "What is the projected revenue for the next 30 days?",
