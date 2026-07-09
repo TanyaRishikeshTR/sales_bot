@@ -67,8 +67,10 @@ DISABLED_MODULES: list[str] = [
 ]
 
 HISTORICAL_SALES_PATHS = [
-    PROJECT_ROOT / "data" / "processed" / "sales_cleaned.csv",
-    PROJECT_ROOT / "data" / "raw" / "sales_joined_raw.csv",
+    PROJECT_ROOT / "data" / "processed" / "sales_cleaned.csv.gz",  # Main compressed file (use this for Streamlit Cloud)
+    PROJECT_ROOT / "data" / "processed" / "sales_cleaned.csv",     # Fallback local uncompressed file
+    PROJECT_ROOT / "data" / "raw" / "sales_joined_raw.csv.gz",     # Compressed raw fallback
+    PROJECT_ROOT / "data" / "raw" / "sales_joined_raw.csv",        # Fallback raw file
 ]
 
 

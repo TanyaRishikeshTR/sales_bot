@@ -14,7 +14,7 @@ venv/
 # We ignore these to prevent pushing massive files to GitHub 
 # and to keep confidential raw transactions private.
 data/raw/*.csv
-data/processed/*.csv
+data/processed/sales_cleaned.csv
 
 # ==========================================
 # 3. ML Model Binaries (IGNORED)
@@ -30,3 +30,7 @@ models/**/*.pkl
 !data/outputs/**/*.csv
 !visuals/**/*.png
 !reports/**/*.csv
+
+
+*.log
+data/processed/sales_cleaned.csv
