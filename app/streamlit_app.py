@@ -29,7 +29,7 @@ from app.chatbot_engine import (  # noqa: E402
     get_chatbot_response,
     prepare_numeric_series,
 )
-from app.data_loader import DATASETS, DISABLED_MODULES, load_all_data  # noqa: E402
+from app.data_loader import load_all_data  # noqa: E402
 
 try:
     from src.config import VISUALS_DIR  # noqa: E402
@@ -44,29 +44,12 @@ APP_SUBTITLE = (
 )
 
 EXAMPLE_QUESTIONS = [
-    "What is total revenue till now?",
-    "What is total gross profit historically?",
-    "What are the top 10 products by past revenue?",
-    "Which product sold the most units?",
-    "Which store has the highest historical revenue?",
-    "Show revenue by product category.",
-    "Show monthly revenue.",
-    "What is the revenue forecast for the next 30 days?",
-    "What is the profit forecast for the next 30 days?",
-    "What are the top profit products next 30 days?",
-    "How good is the model?",
-    "Show revenue by store location.",
-    "Explain model limitations.",
+    "How accurate is the 30-day revenue forecast?",
+    "What is the projected revenue for the next 30 days?",
+    "Which products are forecasted to have the highest profit?",
+    "What were our top-selling products last month?",
+    "Which store locations generated the most revenue historically?",
 ]
-
-FORECAST_STATUS_KEYS = [
-    "revenue_forecast",
-    "profit_forecast",
-    "top_profit_products",
-    "top_profit_products_by_store",
-]
-
-DISABLED_FORECAST_STATUS_KEYS = ["product_demand", "product_store_demand", "restock"]
 
 REQUESTED_VISUALS_DIR = PROJECT_ROOT / "data" / "outputs" / "visuals"
 FORECAST_VISUALS = [
@@ -154,6 +137,28 @@ def inject_theme_css() -> None:
         [data-testid="stSidebar"] h2,
         [data-testid="stSidebar"] h3 {
             color: var(--dark-green);
+        }
+
+        .sidebar-status-card {
+            background: var(--light-green);
+            border: 1px solid rgba(11, 61, 32, 0.14);
+            border-radius: 8px;
+            margin: 0.3rem 0 0.8rem 0;
+            padding: 0.75rem 0.85rem;
+        }
+
+        .sidebar-status-title {
+            color: var(--dark-green);
+            font-size: 0.95rem;
+            font-weight: 850;
+            line-height: 1.25;
+        }
+
+        .sidebar-status-detail {
+            color: var(--muted);
+            font-size: 0.78rem;
+            line-height: 1.35;
+            margin-top: 0.28rem;
         }
 
         h1, h2, h3 {
@@ -624,95 +629,49 @@ def status_badge(available: bool, disabled: bool = False) -> str:
     return f'<span class="{klass}">{label}</span>'
 
 
-def render_dataset_status(label: str, dataset: dict[str, object]) -> None:
-    available = bool(dataset.get("available"))
-    disabled = bool(dataset.get("disabled"))
-    rows = int(dataset.get("rows", 0) or 0)
-    cols = int(dataset.get("columns", 0) or 0)
-    path = dataset.get("path", "")
-    warning = dataset.get("warning")
-    st.sidebar.markdown(f"**{escape_html(label)}** {status_badge(available, disabled=disabled)}", unsafe_allow_html=True)
-    if path:
-        st.sidebar.caption(str(path))
-    if disabled and available:
-        st.sidebar.caption(f"Loaded but disabled for user-facing decisions. Shape: {rows:,} rows x {cols:,} columns")
-    elif available:
-        st.sidebar.caption(f"Shape: {rows:,} rows x {cols:,} columns")
-    elif warning:
-        st.sidebar.caption(str(warning))
-
-
-def dataset_health_line(label: str, dataset: dict[str, object]) -> str:
-    disabled = bool(dataset.get("disabled"))
-    available = bool(dataset.get("available"))
-    rows = int(dataset.get("rows", 0) or 0)
-    if disabled:
-        return f"⚪ {label} (Disabled)"
-    if available:
-        return f"🟢 {label} (Active - {rows:,} rows)"
-    return f"🔴 {label} (Unavailable)"
-
-
-def render_system_status(data: dict[str, dict[str, object]]) -> None:
-    st.sidebar.markdown("### 📊 System Status")
-    for key, dataset in data.items():
-        label = str(dataset.get("label") or DATASETS.get(key, {}).get("label") or key.replace("_", " ").title())
-        st.sidebar.markdown(dataset_health_line(label, dataset))
-
-
 def render_sidebar(data: dict[str, dict[str, object]]) -> dict[str, bool]:
-    st.sidebar.title("Mexico Toys Analytics")
-    render_system_status(data)
-    st.sidebar.divider()
-    st.sidebar.markdown("### Data File Details")
-    historical = data.get("historical_sales", {})
-    render_dataset_status("Historical sales file", historical)
+    st.sidebar.title("Mexico Toys Sales Bot")
 
-    columns = historical.get("column_names", [])
-    with st.sidebar.expander("Historical columns", expanded=False):
+    st.sidebar.markdown("### System Check")
+    forecast_active = any(
+        bool(data.get(key, {}).get("available"))
+        for key in ["revenue_forecast", "profit_forecast"]
+    )
+    forecast_status = "🟢 Forecasts: Active" if forecast_active else "🔴 Forecasts: Unavailable"
+    status_detail = (
+        "Revenue/profit forecast files are loaded."
+        if forecast_active
+        else "Revenue/profit forecast files are not currently available."
+    )
+    st.sidebar.markdown(
+        f"""
+        <div class="sidebar-status-card">
+            <div class="sidebar-status-title">{escape_html(forecast_status)}</div>
+            <div class="sidebar-status-detail">{escape_html(status_detail)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    columns = data.get("historical_sales", {}).get("column_names", [])
+    with st.sidebar.expander("Historical Data Columns", expanded=False):
         if columns:
-            st.write(", ".join(str(col) for col in columns))
+            st.markdown("\n".join(f"- `{column}`" for column in columns))
         else:
-            st.write("No historical columns loaded.")
+            st.caption("No historical sales columns are loaded.")
 
     st.sidebar.divider()
-    render_dataset_status("Model evaluation", data.get("model_evaluation", {}))
-
-    st.sidebar.markdown("### Forecast Files")
-    loaded_forecasts = sum(1 for key in FORECAST_STATUS_KEYS if bool(data.get(key, {}).get("available")))
-    st.sidebar.caption(f"{loaded_forecasts} of {len(FORECAST_STATUS_KEYS)} forecast/output files loaded")
-    for key in FORECAST_STATUS_KEYS:
-        meta = data.get(key, {})
-        label = str(meta.get("label") or DATASETS.get(key, {}).get("label") or key.replace("_", " ").title())
-        render_dataset_status(label, meta)
-
-    st.sidebar.markdown("### Disabled Modules")
-    for module in DISABLED_MODULES:
-        st.sidebar.markdown(f"{status_badge(False, disabled=True)} **{escape_html(module)}**", unsafe_allow_html=True)
-    with st.sidebar.expander("Disabled file details", expanded=False):
-        for key in DISABLED_FORECAST_STATUS_KEYS:
-            meta = data.get(key, {})
-            label = str(meta.get("label") or DATASETS.get(key, {}).get("label") or key.replace("_", " ").title())
-            render_dataset_status(label, meta)
-
-    st.sidebar.divider()
-    show_preview = st.sidebar.checkbox("Show historical data preview", value=False)
-    show_dashboard = st.sidebar.checkbox("Show Power BI reference KPIs", value=False)
-    use_dashboard_reference = st.sidebar.checkbox("Use dashboard reference fallback", value=True)
-    show_debug = st.sidebar.checkbox("Show file debug JSON", value=False)
-
-    st.sidebar.divider()
-    st.sidebar.markdown("### Example Questions")
+    st.sidebar.markdown("### Suggested Questions")
     for index, question in enumerate(EXAMPLE_QUESTIONS):
-        if st.sidebar.button(question, key=f"example-question-{index}", use_container_width=True):
+        if st.sidebar.button(question, key=f"sidebar-suggested-question-{index}", use_container_width=True):
             submit_question(question, data)
             st.rerun()
 
     return {
-        "show_preview": show_preview,
-        "show_dashboard": show_dashboard,
-        "use_dashboard_reference": use_dashboard_reference,
-        "show_debug": show_debug,
+        "show_preview": False,
+        "show_dashboard": False,
+        "use_dashboard_reference": True,
+        "show_debug": False,
     }
 
 
@@ -887,6 +846,8 @@ def render_chart(chart: dict[str, Any] | None) -> None:
 def render_prompt_buttons(data: dict[str, dict[str, object]], key_prefix: str = "main") -> None:
     st.markdown('<div class="section-label">Example Questions</div>', unsafe_allow_html=True)
     for row_index, row in enumerate([EXAMPLE_QUESTIONS[:4], EXAMPLE_QUESTIONS[4:8], EXAMPLE_QUESTIONS[8:]]):
+        if not row:
+            continue
         columns = st.columns(len(row))
         for column, question in zip(columns, row):
             with column:

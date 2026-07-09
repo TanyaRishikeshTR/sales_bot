@@ -492,7 +492,7 @@ def detect_intent(question: str) -> str:
         return "disabled_demand_restock"
     if any(term in text for term in ["help", "what can you answer", "examples"]):
         return "help"
-    if any(term in text for term in ["model", "accuracy", "performance", "mape", "rmse", "mae", "error", "reliable", "evaluation", "limitations", "trust"]):
+    if any(term in text for term in ["model", "accuracy", "accurate", "performance", "mape", "rmse", "mae", "error", "reliable", "evaluation", "limitations", "trust"]):
         return "model_evaluation"
     if any(term in text for term in ["dashboard", "power bi", "executive overview", "kpi from dashboard"]):
         return "dashboard_reference"
@@ -500,9 +500,9 @@ def detect_intent(question: str) -> str:
         return "disabled_demand_restock"
     if any(term in text for term in ["demand forecast", "expected demand", "future demand", "product demand", "product-store demand", "product store demand", "highest demand", "forecasted demand", "forecasted units", "products will sell most", "products have highest demand", "sell most"]):
         return "disabled_demand_restock"
-    if any(term in text for term in ["profit opportunity", "future top products", "top profit products", "top profit products next 30 days", "most profitable", "make most profit", "generate the most profit", "should we promote", "best products by forecasted gross profit"]):
+    if any(term in text for term in ["profit opportunity", "future top products", "top profit products", "highest profit products", "top profit products next 30 days", "most profitable", "make most profit", "generate the most profit", "should we promote", "best products by forecasted gross profit", "products are forecasted to have the highest profit", "forecasted to have the highest profit"]):
         return "profit_opportunity"
-    if any(term in text for term in ["revenue forecast", "future revenue", "next 30 days revenue", "revenue next 30", "expected revenue", "predicted revenue", "forecasted revenue", "total predicted revenue", "highest forecasted revenue"]):
+    if any(term in text for term in ["revenue forecast", "future revenue", "next 30 days revenue", "revenue next 30", "expected revenue", "predicted revenue", "projected revenue", "forecasted revenue", "total predicted revenue", "highest forecasted revenue"]):
         return "revenue"
     if any(term in text for term in ["profit forecast", "gross profit forecast", "future profit", "next 30 days profit", "profit next 30", "expected gross profit", "expected profit", "forecasted profit", "highest forecasted profit", "gross profit next month"]):
         return "profit"
@@ -510,11 +510,11 @@ def detect_intent(question: str) -> str:
         "total revenue", "revenue till now", "revenue so far", "total sales", "actual sales", "past sales",
         "historical sales", "existing records", "current records", "records", "raw data", "total gross profit",
         "total profit", "profit till now", "profit historically", "total units", "units sold", "top product",
-        "top products", "best product", "best selling", "top selling", "most sold", "sold the most",
+        "top products", "best product", "best selling", "top selling", "top-selling", "most sold", "sold the most",
         "top store", "best store", "store performance", "product performance", "category performance",
         "revenue by category", "profit by category", "product category", "revenue by month", "monthly revenue",
         "revenue by location", "revenue by store location", "sales by location", "sales by store location",
-        "location performance", "store location performance", "inventory", "stock on hand", "out of stock", "out-of-stock",
+        "location performance", "store location performance", "store locations generated", "locations generated the most revenue", "inventory", "stock on hand", "out of stock", "out-of-stock",
         "sample historical records", "sample records",
     ]
     if any(term in text for term in historical_terms):
@@ -1030,6 +1030,8 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
             "sales by store location",
             "location performance",
             "store location performance",
+            "store locations generated",
+            "locations generated the most revenue",
         ]
     ):
         location_col = _col(col_map, "location")
@@ -1073,7 +1075,7 @@ def summarize_historical_sales(df: pd.DataFrame, question: str, source_path: str
         answer = f"{calc_prefix}, total units sold are approximately **{format_number(total)}** across **{format_number(len(working))} records**.{date_text}{_reference_text('units')}"
         return build_response(answer, source="historical dataframe", confidence=conf, confidence_reason=reason, intent="historical_sales")
 
-    product_unit_terms = ["most sold", "most units", "top selling", "units by product", "sold the most units", "sold the most"]
+    product_unit_terms = ["most sold", "most units", "top selling", "top-selling", "units by product", "sold the most units", "sold the most"]
     if re.search(r"\btop\s+\d+\s+products?\b", text) or any(term in text for term in ["top product", "top products", "best product", "best selling", "product performance"]) or any(term in text for term in product_unit_terms):
         product_col = _col(col_map, "product")
         if not product_col:
